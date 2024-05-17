@@ -5,23 +5,25 @@ import numpy as np
 def load_temperature_data() -> pd.DataFrame:
     # Read data from file
     raw = pd.read_excel(
-        "./data/temperatura.xlsx", 
-        sheet_name="MA_AX01", 
-        header = [1, 2, 3],
-        index_col=0, 
-        nrows = 12
+        "./data/temperatura.xlsx",
+        sheet_name="MA_AX01",
+        header=[1, 2, 3],
+        index_col=0,
+        nrows=12,
     )
-    
+
     # Rename columns
     renames = {
-        "Media": "Mean", 
-        "Máxima\nmedia": "Max", 
-        "Mínima\nmedia": "Min", 
+        "Media": "Mean",
+        "Máxima\nmedia": "Max",
+        "Mínima\nmedia": "Min",
         "Absoluta": "Absolute",
         **{
             # Renamed "Unnamed columns to Mean"
-            name: "Mean" for name in raw.columns.levels[2] if name.startswith("Unnamed")
-        }
+            name: "Mean"
+            for name in raw.columns.levels[2]
+            if name.startswith("Unnamed")
+        },
     }
     df = raw.rename(columns=renames)
 
@@ -45,18 +47,18 @@ def load_temperature_data() -> pd.DataFrame:
 def load_humidity_data() -> pd.DataFrame:
     # Read data from file
     raw = pd.read_excel(
-        "./data/humedad.xlsx", 
-        sheet_name="MA_AX04", 
-        header = [1, 2],
-        index_col=0, 
-        nrows = 12
+        "./data/humedad.xlsx",
+        sheet_name="MA_AX04",
+        header=[1, 2],
+        index_col=0,
+        nrows=12,
     )
-    
+
     # Rename columns
     renames = {
-        "Media": "Mean", 
-        "Máxima": "Max", 
-        "Mínima": "Min", 
+        "Media": "Mean",
+        "Máxima": "Max",
+        "Mínima": "Min",
     }
     df = raw.rename(columns=renames)
 
@@ -74,10 +76,38 @@ def load_humidity_data() -> pd.DataFrame:
     return df
 
 
-# Test module
-if __name__ == "__main__":
-    temp = load_temperature_data()
-    temp.info()
+def transposed_subcol(df: pd.DataFrame, subcol: str, value_name: str) -> pd.DataFrame:
+    target = df.xs(subcol, level=1, axis=1)
+    target.columns.rename("Year", inplace=True)
 
-    hum = load_humidity_data()
-    hum.info()
+    transposed = target.transpose()
+
+    melted = transposed.melt(
+        var_name="Month", value_name=value_name, ignore_index=False
+    )
+
+    return melted.reset_index().set_index(["Year", "Month"])
+
+
+def analysis_temperature() -> pd.DataFrame:
+    raw_temperature = load_temperature_data()
+    raw_temperature.columns = raw_temperature.columns.droplevel(-1)
+    return transposed_subcol(raw_temperature, "Mean", "Temp")
+
+
+def analysis_humidity() -> pd.DataFrame:
+    raw_humidity = load_humidity_data()
+
+    humidity_min = transposed_subcol(raw_humidity, "Min", "HumMin")
+    humidity_max = transposed_subcol(raw_humidity, "Max", "HumMax")
+    humidity_mean = transposed_subcol(raw_humidity, "Mean", "HumMean")
+
+    return humidity_min.join(humidity_max, on=["Year", "Month"], how="inner").join(
+        humidity_mean, on=["Year", "Month"], how="inner"
+    )
+
+
+def load_analysis_data() -> pd.DataFrame:
+    temperature = analysis_temperature()
+    humidity = analysis_humidity()
+    return temperature.join(humidity, on=["Year", "Month"], how="inner")
