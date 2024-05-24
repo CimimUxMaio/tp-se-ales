@@ -20,11 +20,13 @@ def correlation_analysis(
     ts_plot_opts1: dict = {},
     ts_plot_opts2: dict = {},
     corr_plot_opts: dict = {},
+    suptitle: str = "",
 ):
     time = np.arange(len(data1))
 
     fig, axs = plt.subplots(2, 1)
     fig.set_size_inches(*fig_size)
+    fig.suptitle(suptitle)
 
     # Time Series Plot
     axs[0].set_title(title)
@@ -41,22 +43,24 @@ def correlation_analysis(
     ts_ax1 = axs[0]
     ts_ax1.set_ylabel(ts_ylabel1)
 
-    ts_ax1.plot(time, data1, **ts_plot_opts1)
+    ts_1 = ts_ax1.plot(time, data1, **ts_plot_opts1)
     ts_ax1.scatter(time, data1)
 
     # Data 2 time series plot
     ts_ax2 = ts_ax1.twinx()
 
     ts_ax2.set_ylabel(ts_ylabel2)
-    ts_ax2.plot(time, data2, **ts_plot_opts2)
+    ts_2 = ts_ax2.plot(time, data2, **ts_plot_opts2)
+
+    lines = ts_1 + ts_2
+    labels = [line.get_label() for line in lines]
+    ts_ax1.legend(lines, labels, loc=0)
 
     # Cross Correlation Plot
     corr_ax = axs[1]
 
-    # corr_ax.spines["bottom"].set_position("zero")
-    # corr_ax.spines["left"].set_position("zero")
-    # corr_ax.spines["top"].set_position("none")
-    # corr_ax.spines["right"].set_position("none")
+    corr_ax.spines["left"].set_position("zero")
+    corr_ax.spines["right"].set_position("zero")
 
     corr_ax.set_title(f"Correlacion Cruzada: {title}")
     corr_ax.set_xlabel("Lag")
@@ -73,7 +77,6 @@ def correlation_analysis(
     corr_ax.axhline(1 / np.sqrt(corr.size), color="gray", linestyle="--")
     corr_ax.axhline(-1 / np.sqrt(corr.size), color="gray", linestyle="--")
 
-    fig.legend()
     plt.show()
 
     # Correlation Coefficient
