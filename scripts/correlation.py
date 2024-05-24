@@ -74,8 +74,8 @@ def correlation_analysis(
     corr = smt.ccf(data1, data2, adjusted=False)
     corr_ax.bar(range(0, corr.size), corr, width=0.5, **corr_plot_opts)
 
-    corr_ax.axhline(1 / np.sqrt(corr.size), color="gray", linestyle="--")
-    corr_ax.axhline(-1 / np.sqrt(corr.size), color="gray", linestyle="--")
+    corr_ax.axhline(2 / np.sqrt(corr.size), color="gray", linestyle="--")
+    corr_ax.axhline(-2 / np.sqrt(corr.size), color="gray", linestyle="--")
 
     plt.show()
 
