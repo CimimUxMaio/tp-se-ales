@@ -26,10 +26,10 @@ def correlation_analysis(
 
     fig, axs = plt.subplots(2, 1)
     fig.set_size_inches(*fig_size)
-    fig.suptitle(suptitle)
+    fig.suptitle(suptitle, fontsize=16)
 
     # Time Series Plot
-    axs[0].set_title(title)
+    axs[0].set_title(title, fontsize=14)
 
     if ts_xticks is not None:
         axs[0].set_xticks(ts_xticks)
@@ -37,11 +37,11 @@ def correlation_analysis(
         if ts_xticklabels is not None:
             axs[0].set_xticklabels(ts_xticklabels)
 
-    axs[0].set_xlabel(ts_xlabel)
+    axs[0].set_xlabel(ts_xlabel, fontsize=12)
 
     # Data 1 time series plot
     ts_ax1 = axs[0]
-    ts_ax1.set_ylabel(ts_ylabel1)
+    ts_ax1.set_ylabel(ts_ylabel1, fontsize=12)
 
     ts_1 = ts_ax1.plot(time, data1, **ts_plot_opts1)
     ts_ax1.scatter(time, data1)
@@ -49,7 +49,7 @@ def correlation_analysis(
     # Data 2 time series plot
     ts_ax2 = ts_ax1.twinx()
 
-    ts_ax2.set_ylabel(ts_ylabel2)
+    ts_ax2.set_ylabel(ts_ylabel2, fontsize=12)
     ts_2 = ts_ax2.plot(time, data2, **ts_plot_opts2)
 
     lines = ts_1 + ts_2
@@ -62,8 +62,8 @@ def correlation_analysis(
     corr_ax.spines["left"].set_position("zero")
     corr_ax.spines["right"].set_position("zero")
 
-    corr_ax.set_title(f"Correlacion Cruzada: {title}")
-    corr_ax.set_xlabel("Lag")
+    corr_ax.set_title(f"Correlacion Cruzada: {title}", fontsize=14)
+    corr_ax.set_xlabel("Lag", fontsize=12)
 
     if corr_xticks is not None:
         corr_ax.set_xticks(corr_xticks)
@@ -82,3 +82,4 @@ def correlation_analysis(
     # Correlation Coefficient
     coef = data1.corr(data2, method="pearson")
     print("Coeficiente de Correlacion de Pearson:", coef)
+    return coef

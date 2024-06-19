@@ -164,3 +164,121 @@ def load_analysis_data() -> pd.DataFrame:
     humidity = analysis_humidity()
     precipitations = analysis_precipitation()
     return merge_analysis(temperature, humidity, precipitations)
+
+
+def merge_recorridos_temperaturas(recorridos_raw, temp_data):
+    def group_data(data):
+        return pd.DataFrame(
+            data.groupby(["ANIO", "MES_NUM", "MES"], as_index=False).size()
+        ).rename(columns={"size": "RECORRIDOS"})
+
+    recorridos = group_data(recorridos_raw)
+
+    def imputed_recorridos(data):
+        months = [
+            "Enero",
+            "Febrero",
+            "Marzo",
+            "Abril",
+            "Mayo",
+            "Junio",
+            "Julio",
+            "Agosto",
+            "Septiembre",
+            "Octubre",
+            "Noviembre",
+            "Diciembre",
+        ]
+        month_nums = range(1, 13)
+        years = range(np.min(data["ANIO"]), 2025)
+        mean_recorridos = data["RECORRIDOS"].mean()
+
+        expected_groups = [
+            (y, m)
+            for y in years
+            for m in month_nums
+            if y != 2024 or y == 2024 and m < 5
+        ]
+
+        missing_groups = []
+        for year, month_num in expected_groups:
+            in_data = data[data["ANIO"] == year][["MES_NUM"]].values
+            if month_num not in in_data:
+                missing_groups.append((year, month_num))
+
+        # print("Missing groups:", missing_groups)
+
+        def prev_group(year, month_num):
+            if month_num == 1:
+                return (year - 1, 12)
+            return (year, month_num - 1)
+
+        def next_group(year, month_num):
+            if month_num == 12:
+                return (year + 1, 1)
+            return (year, month_num + 1)
+
+        def find_prev_group(year, month_num):
+            prev = prev_group(year, month_num)
+            if prev in missing_groups:
+                return find_prev_group(*prev)
+            return prev
+
+        def find_next_group(year, month_num):
+            next = next_group(year, month_num)
+            if next in missing_groups:
+                return find_next_group(*next)
+            return next
+
+        def lookup_recorridos(year, month_num):
+            recorridos = data[(data["ANIO"] == year) & (data["MES_NUM"] == month_num)][
+                "RECORRIDOS"
+            ].values
+
+            if len(recorridos) == 0:
+                return mean_recorridos
+            return recorridos[0]
+
+        def group_distance(group1, group2):
+            return (group2[0] - group1[0]) * 12 + group2[1] - group1[1]
+
+        def interpolate_recorridos(group, prev, next):
+            prev_recorridos = lookup_recorridos(*prev)
+            next_recorridos = lookup_recorridos(*next)
+            distance = group_distance(prev, next)
+
+            return (
+                prev_recorridos
+                + group_distance(prev, group)
+                * (next_recorridos - prev_recorridos)
+                / distance
+            )
+
+        missing_data = {"ANIO": [], "MES_NUM": [], "MES": [], "RECORRIDOS": []}
+        for group in missing_groups:
+            year, month_num = group
+            prev = find_prev_group(*group)
+            next = find_next_group(*group)
+
+            missing_data["ANIO"].append(year)
+            missing_data["MES_NUM"].append(month_num)
+            missing_data["MES"].append(months[month_num - 1])
+
+            imputed_recorridos = round(interpolate_recorridos(group, prev, next))
+            missing_data["RECORRIDOS"].append(imputed_recorridos)
+
+        return pd.DataFrame(missing_data)
+
+    missing_df = imputed_recorridos(recorridos)
+
+    imputed_data = pd.concat([recorridos, missing_df], ignore_index=True).sort_values(
+        by=["ANIO", "MES_NUM"]
+    )
+
+    analysis_data = pd.DataFrame(
+        imputed_data.merge(
+            temp_data, left_on=["ANIO", "MES"], right_on=["Year", "Month"], how="inner"
+        )[["ANIO", "MES_NUM", "MES", "RECORRIDOS", "TempMean"]]
+    ).rename(columns={"TempMean": "TEMP"})
+
+    return pd.DataFrame(analysis_data)
