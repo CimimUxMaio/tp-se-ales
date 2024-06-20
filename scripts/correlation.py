@@ -14,8 +14,6 @@ def correlation_analysis(
     ts_ylabel2: str = "",
     ts_xticks: pd.Series | None = None,
     ts_xticklabels: pd.Series | None = None,
-    corr_xticks: pd.Series | None = None,
-    corr_xticklabels: pd.Series | None = None,
     fig_size: tuple[int, int] = (20, 15),
     ts_plot_opts1: dict = {},
     ts_plot_opts2: dict = {},
@@ -63,16 +61,18 @@ def correlation_analysis(
     corr_ax.spines["right"].set_position("zero")
 
     corr_ax.set_title(f"Correlacion Cruzada: {title}", fontsize=14)
-    corr_ax.set_xlabel("Lag", fontsize=12)
+    corr_ax.set_xlabel("Lag (meses)", fontsize=12)
 
-    if corr_xticks is not None:
-        corr_ax.set_xticks(corr_xticks)
+    corr_backwards = smt.ccf(data2, data1, adjusted=False)[::-1][:-1]
+    corr_forwards = smt.ccf(data1, data2, adjusted=False)
+    corr = np.r_[corr_backwards, corr_forwards]
 
-        if corr_xticklabels is not None:
-            corr_ax.set_xticklabels(corr_xticklabels)
+    limit = (corr_forwards.size + 6) // 6
+    corr_xticks = np.arange(-limit * 6, limit * 6, step=6)
+    corr_ax.set_xticks(corr_xticks)
 
-    corr = smt.ccf(data1, data2, adjusted=False)
-    corr_ax.bar(range(0, corr.size), corr, width=0.5, **corr_plot_opts)
+    corr_xs = np.arange(-corr_backwards.size, corr_forwards.size)
+    corr_ax.bar(corr_xs, corr, width=0.5, **corr_plot_opts)
 
     corr_ax.axhline(2 / np.sqrt(corr.size), color="gray", linestyle="--")
     corr_ax.axhline(-2 / np.sqrt(corr.size), color="gray", linestyle="--")
